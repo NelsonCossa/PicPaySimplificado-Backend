@@ -41,7 +41,7 @@ private String password;
 
 private BigDecimal balance;
 
-@Enumerated(@EnumType.STRING)
-private userType userType;
+@Enumerated(EnumType.STRING)
+private UserType userType;
 
 }
