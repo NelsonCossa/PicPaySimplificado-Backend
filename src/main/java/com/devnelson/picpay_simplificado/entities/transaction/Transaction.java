@@ -1,4 +1,4 @@
-package entities.transaction;
+package com.devnelson.picpay_simplificado.entities.transaction;
 
 import java.math.BigDecimal;
 
