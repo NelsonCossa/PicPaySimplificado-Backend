@@ -26,9 +26,12 @@ public class TransactionService {
 	@Autowired
 	private RestTemplate restTemplate;  
 	
-	public void createTransaction (TransactionDTO transaction) throws Exception {
+	@Autowired
+	private NotificationService notificationService;
+	
+	public Transaction createTransaction (TransactionDTO transaction) throws Exception {
     User sender =this.userService.findUserById(transaction.senderId());
-    User receiver=this.userService.findUserById(transaction.senderId());
+    User receiver=this.userService.findUserById(transaction.receiverId());
     userService.validateTransaction(sender, transaction.value());
     
     boolean isAuthorize=this.authorizeTransaction(sender, transaction.value());
@@ -36,26 +39,44 @@ public class TransactionService {
     throw new Exception ("Transaccao nao autorizado");
     }
     
-    Transaction newtransaction= new Transaction();
+    Transaction newTransaction= new Transaction();
     
-    newtransaction.setAmount(transaction.value());
-    newtransaction.setReceiver(receiver);
-    newtransaction.setSender(sender);
+    newTransaction.setAmount(transaction.value());
+    newTransaction.setReceiver(receiver);
+    newTransaction.setSender(sender);
     
     sender.setBalance(sender.getBalance().subtract(transaction.value()));
     receiver.setBalance(receiver.getBalance().add(transaction.value()));
     
-    this.repository.save(new Transaction());
+    this.repository.save(newTransaction);
     this.userService.saveUser(receiver);
     this.userService.saveUser(sender);
+    this.notificationService.sendNotification(sender, "Transaccao realizada com sucesso");
+    this.notificationService.sendNotification(receiver, "Transaccao recebidacom sucesso");
+    return newTransaction;
 }
-	
 	public boolean authorizeTransaction(User sender, BigDecimal value) {
-	ResponseEntity<Map> authorizationResponse=restTemplate.getForEntity("https://util.devi.tools/api/v2/authorize" , Map.class);
-	if(authorizationResponse.getStatusCode()==HttpStatus.OK ) {
-		String message=(String) authorizationResponse.getBody().get("message");
-		return "Autorizado".equalsIgnoreCase(message);
-	}else return false;
+	    try {
+	        ResponseEntity<Map> response = restTemplate.getForEntity(
+	            "https://util.devi.tools/api/v2/authorize",
+	            Map.class
+	        );
+
+	        Map body = response.getBody();
+	        Map data = (Map) body.get("data");
+
+	        return (Boolean) data.get("authorization");
+
+	    } catch (Exception e) {
+	        return false;
+	    }
 	}
+//	public boolean authorizeTransaction(User sender, BigDecimal value) {
+//	ResponseEntity<Map> authorizationResponse=restTemplate.getForEntity("https://util.devi.tools/api/v2/authorize" , Map.class);
+//	if(authorizationResponse.getStatusCode()==HttpStatus.OK ) {
+//		String message=(String) authorizationResponse.getBody().get("message");
+//		return "Autorizado".equalsIgnoreCase(message);
+//	}else return false;
+//	}
 	
 }
